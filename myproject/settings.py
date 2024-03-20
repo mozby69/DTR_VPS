@@ -44,7 +44,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'www.jamerogroupofcompanies.site',
     'localhost',
-    'https://dtr-vps.onrender.com',
+    'dtr-vps.onrender.com',
 ]
 
 #CSRF_TRUSTED_ORIGINS = ['https://jamerogroupofcompanies.site']
