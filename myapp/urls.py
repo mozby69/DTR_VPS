@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import index,display_qr_list,webcam_qr_code_scanner,fetch_messages,display_current_time
+from .views import index,display_qr_list,webcam_qr_code_scanner,fetch_messages
 # from .app_views.qr_generator import generate_qr_code,user_profile
 from django.conf.urls.static import static
 from django.conf import settings
@@ -25,7 +25,7 @@ urlpatterns = [
     path('export_all/', export_data_afternoon, name='export_data_afternoon'),
     path('addemployee/', addemployee, name='addemployee'),
     path('view_attendance/', view_attendance, name='view_attendance'),
-    path('display_current_time/', display_current_time, name='display_current_time'),
+
 
 
 ]

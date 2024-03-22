@@ -62,36 +62,36 @@
 
 
 <div class="container-fluid" style="padding:2rem 1rem;background-color:#5EA061;border-radius:.5rem;text-align:center;">
-    <div class="HeaderContext">
-    
-        <h1 class="fs-primary fw-extra-bold text-clr-primary-accent" id="current_time" style="font-weight:bold;font-size:clamp(1.8rem,3.2rem,4.7rem);color:#D5E8D6;"></h1>
-        <h1 class="fs-secondary fw-extra-bold" id="currentDate" style="font-weight:bold;color:white;"></h1>
 
-        <script>
-            function displayCurrentTime() {
-              $.ajax({
-                url: '{% url "display_current_time" %}',
-                type: 'GET',
-                dataType: 'json',
-                success: function (data) {
-                    var datetimeString = data.internet_time;
-                    var currentTime = new Date(datetimeString);
-                    var formattedTime = currentTime.toLocaleTimeString();
-                    var currentDate = currentTime.toDateString();
-                    $('#currentDate').text(currentDate)
-                    $('#current_time').text(formattedTime);
-                },
-                error: function (error) {
-                  console.error('Error fetching current time:', error);
-                }
-              });
-            }
-            displayCurrentTime();
-            setInterval(displayCurrentTime, 500);
+      <div class="HeaderContext">
+                <h1 class="fs-secondary fw-extra-bold" id="currentDate"></h1>
+            
+                
+                <h1 class="fs-primary fw-extra-bold text-clr-primary-accent" id="currentTime"></h1>
+            
+                <script>
+                    // Function to update the date and time
+                    function updateDateTime() {
+                        var currentDateElement = document.getElementById('currentDate');
+                        var currentTimeElement = document.getElementById('currentTime');
+            
+                        var now = new Date();
+            
+                        // Update the date format
+                        var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                        currentDateElement.textContent = now.toLocaleDateString('en-US', options);
+            
+                        // Update the time format
+                        var timeOptions = { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
+                        currentTimeElement.textContent = now.toLocaleTimeString('en-US', timeOptions);
+                    }
 
-            </script>
+                    updateDateTime();
 
-    </div>
+                    setInterval(updateDateTime, 1000);
+                </script>
+            </div>
+
 </div>
 
 
@@ -140,41 +140,31 @@
 
 
 
-
 <script>
+    // Client-side SSE setup
+var eventSource = new EventSource('/display_qr_list');
 
-    function QRList() {
-        $.ajax({
-            url: '{% url "display_qr_list" %}',
-            type: 'GET',
-            dataType: 'json',
-            success: function (data) {
-                var tableBody = $('#defaultdatatable tbody');
-                tableBody.empty(); // Clear previous table data
+eventSource.onmessage = function(event) {
+    var data = JSON.parse(event.data);
+    var tableBody = $('#defaultdatatable tbody');
+    tableBody.empty(); // Clear previous table data
 
-                data.attendances.forEach(function (attendance) {
-                    var row = $('<tr>');
-                    row.append('<td>' + attendance.name + '</td>');
-                    row.append('<td>' + attendance.timein + '</td>');
-                    row.append('<td>' + attendance.breakout + '</td>');
-                    row.append('<td>' + attendance.breakin + '</td>');
-                    row.append('<td>' + attendance.timeout + '</td>');
-                    tableBody.append(row);
-                });
-            },
-            error: function (error) {
-                console.error('Error fetching attendance data:', error);
-            }
-        });
-    }
-
-    // Call ImportList initially
-    QRList();
-
-    // Use setInterval to update the table every 2000 milliseconds (2 seconds)
-    setInterval(QRList, 1000);
+    data.attendances.forEach(function (attendance) {
+        var row = $('<tr>');
+        row.append('<td>' + attendance.name + '</td>');
+        row.append('<td>' + attendance.timein + '</td>');
+        row.append('<td>' + attendance.breakout + '</td>');
+        row.append('<td>' + attendance.breakin + '</td>');
+        row.append('<td>' + attendance.timeout + '</td>');
+        tableBody.append(row);
+    });
+};
 
 </script>
+
+
+
+
 
 
 
@@ -242,72 +232,49 @@
             });
 
 
-
-
-        // Initialize Toastr
-        toastr.options = {
-            positionClass: 'toast-top-right',
-            preventDuplicates: true,
-            progressBar: true,
-            showDuration: 2500,
-            hideDuration: 1000,
-            timeOut: 4300,
-            extendedTimeOut: 1000,
-        
-        };
-       
-
-       function fetchAndDisplayMessages() {
-            $.ajax({
-                url: '{% url "fetch_messages" %}',
-                method: 'GET',
-                dataType: 'json',
-                success: function(data) {
-                    data.messages.forEach(function(message) {
-                        // Check if 'no_bibo' is present in the comma-separated string of tags
-                        if (message.tags.includes('no_bibo')) {
-                            toastr.error(message.text, {toastClass:'toast-error toastSize'});
-                        }
-
-                        else if (message.tags.includes('timein_already')) {
-                            toastr.error(message.text, {toastClass:'toast-error toastSize'});
-                        }
-                         else if (message.tags.includes('breakin_already')) {
-                            toastr.error(message.text, {toastClass:'toast-error toastSize'});
-                        }
-                        else if (message.tags.includes('timeout_already')) {
-                            toastr.error(message.text, {toastClass:'toast-error toastSize'});
-                        }
-                         else {
-                            toastr.success(message.text, {toastClass: 'toast-success toastSize'});
-                        }
-                    });
-                },
-                error: function(error) {
-                    console.error('Error fetching messages:', error);
-                },
-                complete: function() {
-                    setTimeout(fetchAndDisplayMessages, 300);
-                }
-            });
-        }
-
-
-        fetchAndDisplayMessages();
-    });
-
-
+        });
 
 </script>
 
 
 
+
+     
+   
+<script>  
+
+ // Define a function to handle Server-Sent Events
+ function handleSSEMessages(event) {
+    var data = JSON.parse(event.data);
+    data.messages.forEach(function(message) {
+        if (message.show_toastr) {  // Check the flag to determine if toastr should be shown
+            if (message.tags.includes('no_bibo') || message.tags.includes('timein_already') ||
+                message.tags.includes('breakin_already') || message.tags.includes('timeout_already')) {
+                toastr.error(message.text, {toastClass: 'toast-error toastSize'});
+            } else {
+                toastr.success(message.text, {toastClass: 'toast-success toastSize'});
+            }
+        }
+    });
+}
+
+
+  
+
+
+    toastr.options = {
+        positionClass: 'toast-top-right',
+        preventDuplicates: true,
+        progressBar: true,
+        showDuration: 2500,
+        hideDuration: 1000,
+        timeOut: 4300,
+        extendedTimeOut: 1000,
+    
+    };
+    
+</script>
+
+
+
 {% endblock %}
-
-
-
-
-WARNING: .\zbar\decoder\pdf417.c:89: <unknown>: Assertion "g[0] >= 0 && g[1] >= 0 && g[2] >= 0" failed.
-        dir=0 sig=c912 k=3 g0=ffffffff g1=8d6 g2=bb0 buf[0000]=
-WARNING: .\zbar\decoder\pdf417.c:89: <unknown>: Assertion "g[0] >= 0 && g[1] >= 0 && g[2] >= 0" failed.
-        dir=1 sig=8b5c k=0 g0=169 g1=ffffffff g2=4f2 buf[0000]=

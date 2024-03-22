@@ -30,6 +30,10 @@ from django.db.models import Q
 import pytz
 from django.contrib.auth import logout
 
+from django.http import StreamingHttpResponse
+import json
+from time import sleep
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('login')
@@ -53,22 +57,32 @@ def home(request):
 def index(request):
     return render(request,'myapp/index.html')
 
-def display_current_time(request):
-    internet_time = request.current_time.isoformat()
+# def display_current_time(request):
+#     internet_time = request.current_time.isoformat()
+#     return JsonResponse({'internet_time': internet_time})
 
-    return JsonResponse({'internet_time': internet_time})
+def generate_messages(request):
+    while True:
+        messages = get_messages(request)
+        filtered_messages = [
+            {
+                'text': message.message,
+                'tags': message.tags,
+                'show_toastr': ('timein' in message.tags)  # Add flag to show toastr only for timein messages
+            } for message in messages if 'timein' in message.tags
+            or 'breakout' in message.tags or 'breakin' in message.tags or 'timeout' in message.tags
+            or 'no_bibo' in message.tags or 'breakin_aft' in message.tags or 'timeout_aft' in message.tags
+            or 'timein_already' in message.tags or 'breakin_already' in message.tags or 'timeout_already' in message.tags
+        ]
+        if filtered_messages:
+            yield f"data: {json.dumps({'messages': filtered_messages})}\n\n"
+        time.sleep(1)  # Adjust the interval as needed
 
-@csrf_exempt
+
 def fetch_messages(request):
-    messages = get_messages(request)
-    filtered_messages = [
-        {'text': message.message, 'tags': message.tags} for message in messages if 'timein' in message.tags
-        or 'breakout' in message.tags or 'breakin' in message.tags or 'timeout' in message.tags
-        or 'no_bibo' in message.tags or 'breakin_aft' in message.tags or 'timeout_aft' in message.tags
-        or 'timein_already' in message.tags or 'breakin_already' in message.tags or 'timeout_already' in message.tags
-    ]
-
-    return JsonResponse({'messages': filtered_messages})
+    response = StreamingHttpResponse(generate_messages(request), content_type="text/event-stream")
+    response['Cache-Control'] = 'no-cache'
+    return response
 
 
 
@@ -760,36 +774,49 @@ def scan_qr_code_from_image_data(image_data):
     return decoded_objects
 
 
-@csrf_exempt
+
+
+
+def generate_qr_list():
+    while True:
+        # Get current date and user's branch name
+        current_date = date.today()
+        #user_branchname = request.user.username
+        
+        # Filter and sort attendances
+        attendances = DailyRecord.objects.filter(date=current_date).order_by('-breakout', '-breakin', '-timeout', '-timein')
+
+        def custom_sort(attendance):
+            times = [attendance.breakout, attendance.breakin, attendance.timeout]
+            latest_time = max(filter(None, times), default=None)
+
+            if latest_time is not None and isinstance(latest_time, str):
+                latest_time = datetime.strptime(latest_time, '%H:%M:%S').time()
+
+            return latest_time or datetime.min.time()
+
+        sorted_attendances = sorted(attendances, key=custom_sort, reverse=True)
+
+        # Generate JSON data
+        data = [
+            {
+                'name': attendance.Empname,
+                'timein': str(attendance.timein),
+                'breakout': str(attendance.breakout),
+                'breakin': str(attendance.breakin),
+                'timeout': str(attendance.timeout)
+            } for attendance in sorted_attendances
+        ]
+
+        # Yield data as Server-Sent Events
+        yield f"data: {json.dumps({'attendances': data})}\n\n"
+        sleep(1)  # Adjust the interval as needed
+
+# Modify the view function to use StreamingHttpResponse
 def display_qr_list(request):
-    current_date = date.today()
-    user_branchname = request.user.username
-    attendances = DailyRecord.objects.filter(date=current_date,user_branchname=user_branchname).order_by('-breakout', '-breakin', '-timeout','-timein')
- 
-
-    def custom_sort(attendance):
-        times = [attendance.breakout, attendance.breakin, attendance.timeout]
-        latest_time = max(filter(None, times), default=None)
-
-        if latest_time is not None and isinstance(latest_time, str):
-            latest_time = datetime.strptime(latest_time, '%H:%M:%S').time()
-
-        return latest_time or datetime.min.time()
-
-    sorted_attendances = sorted(attendances, key=custom_sort, reverse=True)
-
-    data = [
-        {
-            'name': attendance.Empname,
-            'timein': str(attendance.timein),
-            'breakout': str(attendance.breakout),
-            'breakin': str(attendance.breakin),
-            'timeout': str(attendance.timeout)
-        } for attendance in sorted_attendances
-    ]
-
-    return JsonResponse({'attendances': data})
-
+    response = StreamingHttpResponse(generate_qr_list(), content_type="text/event-stream")
+    response['Cache-Control'] = 'no-cache'
+    return response
 
 
 

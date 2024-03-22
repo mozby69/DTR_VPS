@@ -12,16 +12,16 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
-import dj_database_url
-import environ
+# import dj_database_url
+# import environ
 
 
 # import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = environ.Env()
-environ.Env.read_env()
+# env = environ.Env()
+# environ.Env.read_env()
 
 
 
@@ -33,7 +33,7 @@ SECRET_KEY = 'django-insecure-k+2o1e6n3%f(yy&9&p9opd_)@#w714p!d^nsu5vh4!iie2j8!)
 
 
 #DEBUG = False
-DEBUG = False
+DEBUG = True
 
 
 
@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'myapp',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -93,6 +94,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'myproject.wsgi.application'
+ASGI_APPLICATION = 'myproject.asgi.application'
+
 
 
 
@@ -115,23 +118,23 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 #     }
 # }
 
-# DATABASES = {
-#     'default':{
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'djangodb3',
-#         'USER': 'root',
-#         'PASSWORD': '',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-#         },
-#     }
-# }
-
 DATABASES = {
-    'default': dj_database_url.parse(env('DATABASE_URL'))
+    'default':{
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'djangodb3',
+        'USER': 'root',
+        'PASSWORD': '',
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+    }
 }
+
+# DATABASES = {
+#     'default': dj_database_url.parse(env('DATABASE_URL'))
+# }
 
 
 AUTH_PASSWORD_VALIDATORS = [
